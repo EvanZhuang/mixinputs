@@ -17,14 +17,22 @@
 
 **Mixture of Inputs (MoI)** is a simple, training-free technique to improve autoregressive text generation.
 
-In standard LLM inference, the model samples a discrete token and discards the rich distribution used to make that choice. **MoI changes this**: after a token is sampled, we create a new input that blends the sampled token with the original distribution—preserving more information for future steps.
+In standard LLM inference, the model samples a token and discards the full distribution. MoI keeps both—it mixes the sampled token with the original distribution to retain more information.
 
-MoI uses Bayesian estimation:  
-- Treats the distribution as a **prior**  
-- Treats the sampled token as an **observation**  
-- Computes the **posterior expectation** as a continuous replacement for the one-hot input
+MoI uses Bayesian estimation to compute $\boldsymbol{w}_t$:
 
-This lets the model maintain a **richer internal state** throughout generation, improving coherence, reasoning, and code synthesis.
+- Prior: the output distribution
+
+- Observation: the sampled token
+
+- Posterior: a smooth input replacing the one-hot vector
+
+$$\boldsymbol{h}_t = \sum_{i=1}^{V} w_{t,i} \boldsymbol{e}_i, \quad \text{where} \quad w_{t,i} \geq 0,\ \sum_i w_{t,i} = 1.$$
+
+$$w_{t,i} = \frac{\boldsymbol{\alpha}_i + c_{i}}{\sum_{i} \boldsymbol{\alpha}_i + N}=\frac{H\,p_{t,i}\;+\;\bigl(\beta+1-H\bigr)\,y_{t,i}}{\beta+1}, \quad\text{with}\;\; N = \sum_{i} c_{i},\; H=
+-\frac{1}{\log V}\sum_{i=1}^{V} p_{t,i}\log p_{t,i}.$$
+
+This lets the model maintain a **richer representation state** $\boldsymbol{h}_t$ throughout generation, improving coherence, reasoning, and code synthesis.
 
 ---
 
@@ -46,6 +54,9 @@ export MIXINPUTS_BETA=1.0
 Then run your usual vLLM-based generation script. That’s it!
 
 ## CLI Utilities
+
+The patch is installed via injection to `usercustomize.py` by adding `import mixinputs` at the head.
+
 We provide command-line tools to patch or unpatch your environment:
 
 ```bash
@@ -56,6 +67,8 @@ mixinputs setup
 mixinputs cleanup
 ```
 
+You can also enable it via adding `import mixinputs` in your script before you import vllm.
+
 ## Configuration Options
 
 | Variable         | Description                                       | Default |
@@ -65,6 +78,30 @@ mixinputs cleanup
 Recommended range: 0.5 to 2.0.
 
 Tune based on task/model—lower values emphasize the distribution, higher values keep more of the sample.
+
+Make sure `enforce_eager=True` in your LLM initialization.
+
+## Evaluations
+
+| Model                   | Method               | Input Info.     | AIME (%) | CountDown4 (%) | GPQA-D (%) | LiveCodeBench (pass@1) | Avg (%) |
+| ----------------------- | -------------------- | --------------- | -------: | -------------: | ---------: | ----------------------: | -------: |
+| **QwQ-32B**             | Standard             | Output Token    |    77.78 |          79.25 |      58.08 |                  76.32  |    72.86 |
+|                         | Direct Mixture       | Output Dist.    |    72.00 |          66.88 |      51.52 |                  53.42  |    60.96 |
+|                         | **MoI**              | Token + Dist.   |    80.00 |          80.01 |      60.10 |                  76.51  |    74.15 |
+|                         | *Gain vs. Standard*  |                 | **+2.22**|       **+0.76**| **+2.02**  |            **+0.19**    | **+1.29**|
+| **Nemotron-Super-49B**  | Standard             | Output Token    |    54.89 |          56.93 |      60.60 |                  39.92  |    53.09 |
+|                         | Direct Mixture       | Output Dist.    |    60.00 |          51.72 |      60.10 |                  16.04  |    46.97 |
+|                         | **MoI**              | Token + Dist.   |    57.11 |          59.53 |      64.65 |                  40.50  |    55.45 |
+|                         | *Gain vs. Standard*  |                 | **+2.22**|       **+2.60**| **+4.05**  |            **+0.58**    | **+2.36**|
+| **Gemma-3-27B**         | Standard             | Output Token    |    25.56 |          56.51 |      46.97 |                  31.31  |    40.09 |
+|                         | Direct Mixture       | Output Dist.    |    26.44 |          55.47 |      51.52 |                  31.99  |    41.36 |
+|                         | **MoI**              | Token + Dist.   |    26.89 |          59.38 |      47.47 |                  32.87  |    41.65 |
+|                         | *Gain vs. Standard*  |                 | **+1.33**|       **+2.87**| **+0.50**  |            **+1.56**    | **+1.56**|
+| **DAPO-Qwen-32B**       | Standard             | Output Token    |    64.67 |          72.03 |      42.42 |                  54.01  |    58.28 |
+|                         | Direct Mixture       | Output Dist.    |    62.67 |          67.19 |      37.88 |                  23.87  |    47.90 |
+|                         | **MoI**              | Token + Dist.   |    64.44 |          78.75 |      42.93 |                  55.18  |    60.33 |
+|                         | *Gain vs. Standard*  |                 | **–0.23**|       **+6.72**| **+0.51**  |            **+1.17**    | **+2.05**|
+
 
 ## Questions?
 

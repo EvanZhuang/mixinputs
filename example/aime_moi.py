@@ -6,7 +6,7 @@ import transformers
 import os
 import torch
 
-from scripts.reward import compute_score, extract_solution
+from reward import compute_score, extract_solution
 
 def parse_arguments():
     """
