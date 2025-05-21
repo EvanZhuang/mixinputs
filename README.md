@@ -19,7 +19,7 @@
 
 In standard LLM inference, the model samples a token and discards the full distribution. MoI keeps both—it mixes the sampled token with the original distribution to retain more information.
 
-MoI uses Bayesian estimation to compute $\boldsymbol{w}_t$:
+MoI uses Bayesian estimation to compute mixing weights:
 
 - Prior: the output distribution
 
@@ -27,12 +27,7 @@ MoI uses Bayesian estimation to compute $\boldsymbol{w}_t$:
 
 - Posterior: a smooth input replacing the one-hot vector
 
-$$\boldsymbol{h}_t = \sum_{i=1}^{V} w_{t,i} \boldsymbol{e}_i, \quad \text{where} \quad w_{t,i} \geq 0,\ \sum_i w_{t,i} = 1.$$
-
-$$w_{t,i} = \frac{\boldsymbol{\alpha}_i + c_{i}}{\sum_{i} \boldsymbol{\alpha}_i + N}=\frac{H\,p_{t,i}\;+\;\bigl(\beta+1-H\bigr)\,y_{t,i}}{\beta+1}, \quad\text{with}\;\; N = \sum_{i} c_{i},\; H=
--\frac{1}{\log V}\sum_{i=1}^{V} p_{t,i}\log p_{t,i}.$$
-
-This lets the model maintain a **richer representation state** $\boldsymbol{h}_t$ throughout generation, improving coherence, reasoning, and code synthesis.
+This lets the model use a **richer representation state** $\boldsymbol{h}_t$ as inputs throughout generation, improving coherence, reasoning, and code synthesis.
 
 ---
 
@@ -41,6 +36,7 @@ This lets the model maintain a **richer representation state** $\boldsymbol{h}_t
 Requires `vllm >= 0.8.5`.
 
 ```bash
+pip install vllm
 pip install mixinputs
 mixinputs setup
 ```
@@ -51,7 +47,7 @@ To activate MoI, set the MIXINPUTS_BETA environment variable:
 ```bash
 export MIXINPUTS_BETA=1.0
 ```
-Then run your usual vLLM-based generation script. That’s it!
+Then run your usual vLLM-based generation script. That's it!
 
 ## CLI Utilities
 
@@ -80,6 +76,10 @@ Recommended range: 0.5 to 2.0.
 Tune based on task/model—lower values emphasize the distribution, higher values keep more of the sample.
 
 Make sure `enforce_eager=True` in your LLM initialization.
+
+## Examples 
+
+We have included 2 example usages with AIME and Count Down 4, after executing the bash you should see 59-60 Acc for CountDown4 (Nemotron-Super-49B) and ~80 Acc for AIME (QwQ-32B).
 
 ## Evaluations
 

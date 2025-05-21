@@ -11,9 +11,10 @@ logging.basicConfig(
 def check_vllm_installed():
     """Check if vllm is installed"""
     try:
-        import vllm
+        import importlib.metadata
+        importlib.metadata.version("vllm")
         return True
-    except ImportError:
+    except importlib.metadata.PackageNotFoundError:
         return False
 
 
@@ -26,4 +27,4 @@ if 'MIXINPUTS_BETA' in os.environ and check_vllm_installed():
     patch_status = patch_vllm_llm()
     logger.info(f"Patching vllm LLM... status: {patch_status}")
 else:
-    logger.info("Skipping the patching of vllm, set MIXINPUTS_BETA to enable it.")
+    logger.debug("Skipping the patching of vllm, set MIXINPUTS_BETA to enable it.")
