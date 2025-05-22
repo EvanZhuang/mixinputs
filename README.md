@@ -77,6 +77,8 @@ Tune based on task/model—lower values emphasize the distribution, higher value
 
 Make sure `enforce_eager=True` in your LLM initialization.
 
+Set `MIXINPUTS_BETA=-100` to activate direct mixture, i.e., mixing with solely output distributions.
+
 ## Examples 
 
 We have included 2 example usages with [AIME](/example/aime.sh) and [Count Down 4](/example/countdown.sh), after executing the bash you should see 59-60 Acc for CountDown4 (Nemotron-Super-49B) and ~80 Acc for AIME (QwQ-32B).

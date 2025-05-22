@@ -1213,18 +1213,28 @@ class GPUModelRunner(LoRAModelRunnerMixin):
             # Dirichlet concentration parameter (controls smoothing strength)
             beta =  self.input_batch.beta
 
-            # Compute posterior probabilities (Dirichlet-Multinomial conjugate update)
-            posterior_probs = (prior_probs + beta * observed_mask) / (1 + beta) 
+            if beta > -99:
+                # Compute posterior probabilities (Dirichlet-Multinomial conjugate update)
+                posterior_probs = (prior_probs + beta * observed_mask) / (1 + beta) 
 
-            # Get embeddings for all candidate tokens
-            candidate_embeddings = self.model.get_input_embeddings(token_ids_slice)
+                # Get embeddings for all candidate tokens
+                candidate_embeddings = self.model.get_input_embeddings(token_ids_slice)
 
-            # Compute the posterior expected embedding
-            posterior_embedding = torch.sum(
-                candidate_embeddings * posterior_probs.unsqueeze(-1), 
-                dim=1, 
-                keepdim=True
-            ) * normalized_entropy + sampled_token_embedding * (1-normalized_entropy)
+                # Compute the posterior expected embedding
+                posterior_embedding = torch.sum(
+                    candidate_embeddings * posterior_probs.unsqueeze(-1), 
+                    dim=1, 
+                    keepdim=True
+                ) * normalized_entropy + sampled_token_embedding * (1-normalized_entropy)
+            else:
+                print("Using direct mixture")
+                candidate_embeddings = self.model.get_input_embeddings(token_ids_slice)
+                # Direct Mixture
+                posterior_embedding = torch.sum(
+                    candidate_embeddings * prior_probs.unsqueeze(-1), 
+                    dim=1, 
+                    keepdim=True
+                )
 
             next_mixed_input_embeds = torch.zeros_like(posterior_embedding)
             # The final mixed embedding is the posterior expected embedding

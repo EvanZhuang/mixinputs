@@ -14,7 +14,7 @@ requirements = [
 
 setup(
     name='mixinputs',
-    version='0.1.0',
+    version='0.1.1',
     description='Mixture of Inputs Patch for vLLM',
     long_description= read_readme(),
     long_description_content_type="text/markdown",
