@@ -81,6 +81,8 @@ Make sure `enforce_eager=True` in your LLM initialization.
 
 We have included 2 example usages with [AIME](/example/aime.sh) and [Count Down 4](/example/countdown.sh), after executing the bash you should see 59-60 Acc for CountDown4 (Nemotron-Super-49B) and ~80 Acc for AIME (QwQ-32B).
 
+For external evaluation packages, simply set `export MIXINPUTS_BETA=<BETA_VALUE>` and use vllm as the backbone, will activate MoI.
+
 Additionally, MoI also work with server mode, we provide an example [script](/example/serve.sh).
 
 ## Evaluations
