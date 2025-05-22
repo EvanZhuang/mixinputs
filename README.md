@@ -1,6 +1,6 @@
 <h1 align="center">🎨 Mixture of Inputs (MoI) 🎨</h1>
 <p align="center"><b>Text Generation Beyond Discrete Token Sampling</b>  
-(<a href="https://arxiv.org/abs/TBD">arXiv</a>)</p>
+(<a href="https://arxiv.org/abs/2505.14827">arXiv</a>)</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg">
@@ -79,7 +79,9 @@ Make sure `enforce_eager=True` in your LLM initialization.
 
 ## Examples 
 
-We have included 2 example usages with AIME and Count Down 4, after executing the bash you should see 59-60 Acc for CountDown4 (Nemotron-Super-49B) and ~80 Acc for AIME (QwQ-32B).
+We have included 2 example usages with [AIME](/example/aime.sh) and [Count Down 4](/example/countdown.sh), after executing the bash you should see 59-60 Acc for CountDown4 (Nemotron-Super-49B) and ~80 Acc for AIME (QwQ-32B).
+
+Additionally, MoI also work with server mode, we provide an example [script](/example/serve.sh).
 
 ## Evaluations
 
@@ -111,10 +113,10 @@ If you have any questions related to the code or the paper, feel free to reach o
 
 If you find our paper and code useful, please cite us:
 ```r
-@article{zhuang2024textgen,
+@article{zhuang2025textgen,
   title={Text Generation Beyond Discrete Token Sampling},
   author={Zhuang, Yufan and Liu, Liyuan and Singh, Chandan and Shang, Jingbo and Gao, Jianfeng},
-  journal={arXiv preprint arXiv:TBD},
+  journal={arXiv preprint arXiv:2505.14827},
   year={2025}
 }
 ```

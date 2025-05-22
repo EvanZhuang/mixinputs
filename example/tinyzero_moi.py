@@ -5,12 +5,6 @@ from vllm import LLM, SamplingParams
 import transformers
 import os
 import torch
-# Import wandb conditionally
-try:
-    import wandb
-    WANDB_AVAILABLE = True
-except ImportError:
-    WANDB_AVAILABLE = False
 
 from reward import compute_score, extract_solution, validate_equation
 
@@ -57,30 +51,6 @@ def parse_arguments():
         help="Top-p (nucleus) sampling"
     )
     parser.add_argument(
-        "--top_k",
-        type=int,
-        default=-1,
-        help="Top-k sampling (-1 disables top-k)"
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=1,
-        help="Number of questions to batch together per generation call"
-    )
-    parser.add_argument(
-        "--logprobs",
-        type=int,
-        default=1,
-        help="Number of logprobs to return (0 disables logprobs)"
-    )
-    parser.add_argument(
-        "--alpha",
-        type=int,
-        default=2,
-        help="Alpha value for mix strength"
-    )
-    parser.add_argument(
         "--eager",
         type=str,
         default="False",
@@ -101,12 +71,6 @@ def parse_arguments():
         "--wandb",
         action="store_true",
         help="Enable Weights & Biases logging (default: False)"
-    )
-    parser.add_argument(
-        '--run_id',
-        type=str,
-        default="0",
-        help='Run ID for wandb logging'
     )
     args = parser.parse_args()
     return args
@@ -161,29 +125,6 @@ def main():
     # Parse command-line arguments
     args = parse_arguments()
 
-    # Initialize wandb if enabled
-    if args.wandb and WANDB_AVAILABLE:
-        wandb.init(
-            project="mix_tinyzero_v2",
-            config={
-                "model_name": args.model_name,
-                "dataset_name": args.dataset_name,
-                "split": args.split,
-                "max_new_tokens": args.max_new_tokens,
-                "temperature": args.temperature,
-                "top_p": args.top_p,
-                "top_k": args.top_k,
-                "batch_size": args.batch_size,
-                "logprobs": args.logprobs,
-                "alpha": args.alpha,
-                "eager": args.eager,
-                "run_id": args.run_id,
-            },
-            name=f"{args.model_name.split('/')[-1]}_{args.dataset_name.split('/')[-1]}_{args.run_id}"
-        )
-    elif args.wandb and not WANDB_AVAILABLE:
-        print("Warning: wandb logging requested but wandb is not installed. Run `pip install wandb` to enable logging.")
-
     # 1. Load the dataset
     dataset = load_dataset(args.dataset_name)['train']
     dataset = dataset.select(range(128))
@@ -194,15 +135,15 @@ def main():
     # create folder if not exists
 
     os.makedirs(args.output_dir, exist_ok=True)
-    file_name = f"{model_base_name}={dataset_base_name}={args.logprobs}={args.alpha}={args.top_p}={args.temperature}.json"
+    file_name = f"{model_base_name}={dataset_base_name}={args.top_p}={args.temperature}.json"
     # Check if file already exists
     if os.path.exists(f"{args.output_dir}/{file_name}") and not args.debug:
         print(f"File {args.output_dir}/{file_name} already exists. Skipping evaluation.")
         return
 
     # 2. Initialize the vLLM LLM
-    MAX_MODEL_LEN = 8192 + 1024
-    llm = LLM(args.model_name, dtype="bfloat16", tensor_parallel_size=torch.cuda.device_count(), max_model_len=MAX_MODEL_LEN, max_num_seqs=128, enable_chunked_prefill=False, enforce_eager=args.eager.lower() == "true", gpu_memory_utilization=0.95, trust_remote_code=True)  # Updated to enable_chunked_prefill=True
+    MAX_MODEL_LEN = args.max_new_tokens + 1024
+    llm = LLM(args.model_name, dtype="bfloat16", tensor_parallel_size=torch.cuda.device_count(), max_model_len=MAX_MODEL_LEN, max_num_seqs=128, enable_chunked_prefill=False, enforce_eager=args.eager.lower() == "true", gpu_memory_utilization=0.95, trust_remote_code=True) 
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
 
     # 3. Prepare generation parameters
@@ -210,7 +151,6 @@ def main():
         temperature=args.temperature,
         max_tokens=args.max_new_tokens,
         top_p=args.top_p,
-        min_tokens=args.alpha
     )
 
     correct = 0
@@ -231,20 +171,14 @@ def main():
         # Speicific for these tiny zero datasets
         generation_prompt = prompt['content'].split("Assistant:")[1].strip()
         prompt['content'] = prompt['content'].split("Assistant:")[0]
-        # import pdb; pdb.set_trace()
+
         gold_answer = example["reward_model"]['ground_truth']  # integer
-        # check if gold_answer is a dict
-        # if type(gold_answer) == dict:
-        #     gold_answer = gold_answer['target']
         gold_answers.append(gold_answer)
 
         if "nemotron" in args.model_name.lower():
             system_prompt = {"role": "system", "content": "detailed thinking on"}
             prompt['content'] = prompt['content'] + "No latex symbols in the final answer! Double check the final answer."
             prompt = tokenizer.apply_chat_template([system_prompt, prompt], tokenize=False, add_generation_prompt=True)
-        elif "qwen3" in args.model_name.lower():
-            # For Qwen3 models, we don't need to add the instruction
-            prompt = tokenizer.apply_chat_template([prompt], tokenize=False, add_generation_prompt=True)
         else:
             prompt = tokenizer.apply_chat_template([prompt], tokenize=False, add_generation_prompt=True) + generation_prompt
         all_prompts.append(prompt)
@@ -279,24 +213,12 @@ def main():
     print(f"  Correct answers: {correct}")
     print(f"  Accuracy: {accuracy:.2%}")
 
-    # Log metrics to wandb if enabled
-    if args.wandb and WANDB_AVAILABLE:
-        wandb.log({
-            "accuracy": accuracy,
-            "correct": correct,
-            "total": total
-        })
-
     # Save the predictions to a file
     out_json = [{"accuracy": accuracy, "total": total, "correct": correct}]
     out_json = out_json + [{"question": q,"gold": g, "predicted": p, "pred_solution": s} for q, g, p, s in zip(all_prompts, gold_answers, predictions, predicted_solutions)]
 
     with open(f"{args.output_dir}/{file_name}", "w") as f:
         json.dump(out_json, f, indent=2)
-
-    # Finish the wandb run if enabled
-    if args.wandb and WANDB_AVAILABLE:
-        wandb.finish()
 
     print(f"Results saved to {args.output_dir}/{file_name}")
 

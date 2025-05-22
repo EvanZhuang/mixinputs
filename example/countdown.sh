@@ -3,9 +3,9 @@ model_name="nvidia/Llama-3_3-Nemotron-Super-49B-v1"
 dataset_name="yzhuang/tinyzero-Countdown-Tasks-4"
 
 # hyper-parameters
-temperature=0.8
-top_p=0.8
-max_new_tokens=32768
+temperature=0.6
+top_p=0.4
+max_new_tokens=8192
 
 out_dir="./results"
 
