@@ -63,7 +63,7 @@ mixinputs setup
 mixinputs cleanup
 ```
 
-You can also enable it via adding `import mixinputs` in your script before you import vllm.
+You can also enable it via adding `import mixinputs` in your script before you import vllm. The mixinputs will not activate without the environment variable `MIXINPUTS_BETA`.
 
 ## Configuration Options
 
