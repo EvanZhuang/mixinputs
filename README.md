@@ -34,10 +34,10 @@ This lets the model use a **richer representation state** $\boldsymbol{h}_t$ as 
 
 ## Installation
 
-Requires `vllm >= 0.8.5`.
+Requires `vllm == 0.8.5` or `vllm == 0.8.5.post1`.
 
 ```bash
-pip install vllm
+pip install vllm==0.8.5
 pip install mixinputs
 mixinputs setup
 ```
